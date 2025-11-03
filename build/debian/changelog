@@ -1,3 +1,9 @@
+libveg (0.1.13) unstable; urgency=medium
+
+  * debian: fix dbgsrc path
+
+ -- Ivan Gagis <igagis@gmail.com>  Mon, 03 Nov 2025 15:27:31 +0200
+
 libveg (0.1.12) unstable; urgency=medium
 
   * debian trixie build
