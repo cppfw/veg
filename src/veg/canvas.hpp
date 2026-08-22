@@ -510,6 +510,17 @@ public:
 	);
 
 	/**
+	 * @brief Add an ellipse to the current shape.
+	 * All the coordinates are absolute.
+	 * @param center - center point of the ellipse.
+	 * @param radii - x-axis and y-axis radiuses of the ellipse.
+	 */
+	void ellipse(
+		const r4::vector2<real>& center, //
+		const r4::vector2<real>& radii
+	);
+
+	/**
 	 * @brief Fill the current shape.
 	 * Actually performs rasterization of the current shape by filling it with the
 	 * current paint source using the current fill rule. The current shape is

@@ -864,29 +864,70 @@ void canvas::rectangle(
 	}
 }
 
-void canvas::circle(const r4::vector2<real>& center, real radius)
+void canvas::circle(
+	const r4::vector2<real>& center, //
+	real radius
+)
 {
 	this->move_abs(center + r4::vector2<real>{radius, 0});
 
 	this->cubic_curve_rel(
-		{0, arc_bezier_param * radius},
+		{0, arc_bezier_param * radius}, //
 		{-radius * (1 - arc_bezier_param), radius},
 		{-radius, radius}
 	);
 
 	this->cubic_curve_rel(
-		{-arc_bezier_param * radius, 0},
+		{-arc_bezier_param * radius, 0}, //
 		{-radius, -radius * (1 - arc_bezier_param)},
 		{-radius, -radius}
 	);
 
 	this->cubic_curve_rel(
-		{0, -arc_bezier_param * radius},
+		{0, -arc_bezier_param * radius}, //
 		{radius * (1 - arc_bezier_param), -radius},
 		{radius, -radius}
 	);
 
-	this->cubic_curve_rel({arc_bezier_param * radius, 0}, {radius, radius * (1 - arc_bezier_param)}, {radius, radius});
+	this->cubic_curve_rel(
+		{arc_bezier_param * radius, 0}, //
+		{radius, radius * (1 - arc_bezier_param)},
+		{radius, radius}
+	);
+
+	this->close_path();
+}
+
+void canvas::ellipse(
+	const r4::vector2<real>& center, //
+	const r4::vector2<real>& radius
+)
+{
+	this->move_abs(center + r4::vector2<real>{radius.x(), 0});
+
+	this->cubic_curve_rel(
+		{0, arc_bezier_param * radius.y()}, //
+		{-radius.x() * (1 - arc_bezier_param), radius.y()},
+		{-radius.x(), radius.y()}
+	);
+
+	this->cubic_curve_rel(
+		{-arc_bezier_param * radius.x(), 0}, //
+		{-radius.x(), -radius.y() * (1 - arc_bezier_param)},
+		{-radius.x(), -radius.y()}
+	);
+
+	this->cubic_curve_rel(
+		{0, -arc_bezier_param * radius.y()}, //
+		{radius.x() * (1 - arc_bezier_param), -radius.y()},
+		{radius.x(), -radius.y()}
+	);
+
+	this->cubic_curve_rel(
+		{arc_bezier_param * radius.x(), 0}, //
+		{radius.x(), radius.y() * (1 - arc_bezier_param)},
+		{radius.x(), radius.y()}
+	);
 
 	this->close_path();
 }
