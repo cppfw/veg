@@ -1,0 +1,5 @@
+# veg must support C++17, so the C++20-only modernize-use-std-numbers
+# (std::numbers constants) is suppressed for this library.
+Checks: |
+  -modernize-use-std-numbers
+InheritParentConfig: true
