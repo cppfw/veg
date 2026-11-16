@@ -119,7 +119,7 @@ protected:
 
 	const gradient_wrapper_base& get_agg_gradient() const
 	{
-		ASSERT(this->cur_grad)
+		utki::assert(this->cur_grad, SL);
 		return *this->cur_grad;
 	}
 

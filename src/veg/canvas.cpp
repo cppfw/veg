@@ -88,7 +88,7 @@ rasterimage::image<uint8_t, 4> canvas::release()
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	auto ret = rasterimage::image<uint8_t, 4>(this->dims, std::move(this->pixels));
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	auto ret = std::move(this->group_stack.front().image);
 #endif
 
@@ -157,11 +157,17 @@ void canvas::transform(const r4::matrix2<real>& matrix)
 	m.x0 = matrix[0][2];
 	m.y0 = matrix[1][2];
 	cairo_transform(this->cr, &m);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	this->context.matrix.premultiply(to_agg_matrix(matrix));
 #endif
 }
@@ -170,11 +176,17 @@ void canvas::translate(real x, real y)
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_translate(this->cr, x, y);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	this->context.matrix.premultiply(agg::trans_affine_translation(x, y));
 #endif
 }
@@ -183,11 +195,17 @@ void canvas::rotate(real radians)
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_rotate(this->cr, radians);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	this->context.matrix.premultiply(agg::trans_affine_rotation(radians));
 #endif
 }
@@ -197,16 +215,22 @@ void canvas::scale(real x, real y)
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	if (x * y != 0) { // cairo does not allow non-invertible scaling
 		cairo_scale(this->cr, x, y);
-		ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-			o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
-		})
+		utki::assert(
+			[this]() -> bool {
+				return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+			},
+			[&](auto& o) {
+				o << "cairo status = " << cairo_status_to_string(cairo_status(this->cr));
+			},
+			SL
+		);
 	} else {
 		LOG([&](auto& o) {
 			o << "WARNING: non-invertible scaling encountered" << std::endl;
 		})
 	}
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	this->context.matrix.premultiply(agg::trans_affine_scaling(x, y));
 #endif
 }
@@ -217,7 +241,7 @@ void canvas::set_fill_rule(fill_rule fr)
 	cairo_fill_rule_t cfr = [&fr]() {
 		switch (fr) {
 			default:
-				ASSERT(false);
+				utki::assert(false, SL);
 			case fill_rule::evenodd:
 				return CAIRO_FILL_RULE_EVEN_ODD;
 			case fill_rule::nonzero:
@@ -225,11 +249,16 @@ void canvas::set_fill_rule(fill_rule fr)
 		}
 	}();
 	cairo_set_fill_rule(this->cr, cfr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	switch (fr) {
 		default:
-			ASSERT(false)
+			utki::assert(false, SL);
 		case fill_rule::evenodd:
 			this->context.fill_rule = agg::filling_rule_e::fill_even_odd;
 			break;
@@ -251,7 +280,12 @@ void canvas::set_source(const r4::vector4<real>& rgba)
 		backend_real(rgba.b()),
 		backend_real(rgba.a())
 	);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->context.color.r = rgba.r();
 	this->context.color.g = rgba.g();
@@ -263,15 +297,26 @@ void canvas::set_source(const r4::vector4<real>& rgba)
 
 void canvas::set_source(std::shared_ptr<const gradient> g)
 {
-	ASSERT(g)
+	utki::assert(g, SL);
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_set_source(this->cr, g->pattern);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	// switch from screen coordinates to gradeint local coordinates
-	ASSERT(this->get_matrix().det() != 0, [this](auto& o) {
-		o << "matrix =\n" << this->get_matrix();
-	}) // make sure the matrix is invertible
+	utki::assert(
+		[this]() -> bool {
+			return this->get_matrix().det() != 0;
+		},
+		[this](auto& o) {
+			o << "matrix =\n" << this->get_matrix();
+		},
+		SL
+	); // make sure the matrix is invertible
 	auto gm = g->local_matrix * this->get_matrix().inv();
 
 	this->context.gradient_matrix = to_agg_matrix(gm);
@@ -285,10 +330,15 @@ r4::vector2<real> canvas::matrix_mul(const r4::vector2<real>& v) const
 	backend_real x = v.x();
 	backend_real y = v.y();
 	cairo_user_to_device(this->cr, &x, &y);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 	return r4::vector2<real>(real(x), real(y));
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	auto vec = v.to<decltype(this->context.matrix.sx)>();
 	this->context.matrix.transform(&vec.x(), &vec.y());
 	return vec.to<real>();
@@ -301,10 +351,15 @@ r4::vector2<real> canvas::matrix_mul_distance(const r4::vector2<real>& v) const
 	backend_real x = v.x();
 	backend_real y = v.y();
 	cairo_user_to_device_distance(this->cr, &x, &y);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 	return r4::vector2<real>(real(x), real(y));
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	auto vec = v.to<decltype(this->context.matrix.sx)>();
 	this->context.matrix.transform_2x2(&vec.x(), &vec.y());
 	return vec.to<real>();
@@ -322,7 +377,12 @@ r4::rectangle<real> canvas::get_shape_bounding_box() const
 	backend_real x1 = 0, y1 = 0, x2 = 0, y2 = 0;
 
 	cairo_path_extents(this->cr, &x1, &y1, &x2, &y2);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 
 	return r4::rectangle<real>{
 		{     real(x1),      real(y1)},
@@ -346,7 +406,12 @@ bool canvas::has_current_point() const
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	auto cp = cairo_has_current_point(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 	return bool(cp != 0);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	return this->path.total_vertices() != 0;
@@ -361,7 +426,12 @@ r4::vector2<real> canvas::get_current_point() const
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	backend_real xx = 0, yy = 0;
 	cairo_get_current_point(this->cr, &xx, &yy);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 	return {real(xx), real(yy)};
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	return {real(this->path.last_x()), real(this->path.last_y())};
@@ -372,7 +442,12 @@ void canvas::move_abs(const r4::vector2<real>& p)
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_move_to(this->cr, backend_real(p.x()), backend_real(p.y()));
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.move_to(p.x(), p.y());
 	this->subpath_start_point = p;
@@ -388,7 +463,12 @@ void canvas::move_rel(const r4::vector2<real>& p)
 	}
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_rel_move_to(this->cr, backend_real(p.x()), backend_real(p.y()));
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->move_abs(this->get_current_point() + p);
 #endif
@@ -398,7 +478,12 @@ void canvas::line_abs(const r4::vector2<real>& p)
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_line_to(this->cr, backend_real(p.x()), backend_real(p.y()));
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.line_to(p.x(), p.y());
 	this->agg_invalidate_polyline();
@@ -413,7 +498,12 @@ void canvas::line_rel(const r4::vector2<real>& p)
 	}
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_rel_line_to(this->cr, backend_real(p.x()), backend_real(p.y()));
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.line_rel(p.x(), p.y());
 	this->agg_invalidate_polyline();
@@ -425,13 +515,33 @@ void canvas::quadratic_curve_abs(const r4::vector2<real>& cp1, const r4::vector2
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	backend_real x0 = 0, y0 = 0; // current point, absolute coordinates
 	if (cairo_has_current_point(this->cr)) {
-		ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+		utki::assert(
+			[this]() -> bool {
+				return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+			},
+			SL
+		);
 		cairo_get_current_point(this->cr, &x0, &y0);
-		ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+		utki::assert(
+			[this]() -> bool {
+				return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+			},
+			SL
+		);
 	} else {
-		ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+		utki::assert(
+			[this]() -> bool {
+				return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+			},
+			SL
+		);
 		cairo_move_to(this->cr, 0, 0);
-		ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+		utki::assert(
+			[this]() -> bool {
+				return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+			},
+			SL
+		);
 		x0 = 0;
 		y0 = 0;
 	}
@@ -448,7 +558,12 @@ void canvas::quadratic_curve_abs(const r4::vector2<real>& cp1, const r4::vector2
 		backend_real(ep.x()),
 		backend_real(ep.y())
 	);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.curve3(cp1.x(), cp1.y(), ep.x(), ep.y());
 	this->agg_invalidate_polyline();
@@ -474,7 +589,12 @@ void canvas::quadratic_curve_rel(const r4::vector2<real>& cp1, const r4::vector2
 		backend_real(ep.x()),
 		backend_real(ep.y())
 	);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	auto d = this->get_current_point();
 	this->quadratic_curve_abs(cp1 + d, ep + d);
@@ -493,7 +613,12 @@ void canvas::cubic_curve_abs(const r4::vector2<real>& cp1, const r4::vector2<rea
 		backend_real(ep.x()),
 		backend_real(ep.y())
 	);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.curve4(cp1.x(), cp1.y(), cp2.x(), cp2.y(), ep.x(), ep.y());
 	this->agg_invalidate_polyline();
@@ -516,7 +641,12 @@ void canvas::cubic_curve_rel(const r4::vector2<real>& cp1, const r4::vector2<rea
 		backend_real(ep.x()),
 		backend_real(ep.y())
 	);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	auto d = this->get_current_point();
 	this->cubic_curve_abs(cp1 + d, cp2 + d, ep + d);
@@ -527,7 +657,12 @@ void canvas::close_path()
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_close_path(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.close_polygon();
 	this->move_abs(this->subpath_start_point);
@@ -539,7 +674,12 @@ void canvas::clear_path()
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_new_path(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->path.remove_all();
 	this->subpath_start_point.set(0);
@@ -565,7 +705,12 @@ void canvas::arc_abs(
 	} else {
 		cairo_arc_negative(this->cr, 0, 0, 1, backend_real(start_angle), backend_real(start_angle + sweep_angle));
 	}
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	agg::bezier_arc shape(center.x(), center.y(), radius.x(), radius.y(), start_angle, sweep_angle);
 
@@ -588,7 +733,7 @@ void canvas::arc_abs(
 	if (radius.x() <= 0) {
 		return;
 	}
-	ASSERT(radius.x() > 0)
+	utki::assert(radius.x() > 0, SL);
 	auto radii_ratio = radius.y() / radius.x();
 
 	if (radii_ratio <= 0) {
@@ -600,7 +745,7 @@ void canvas::arc_abs(
 	// cancel rotation of end point
 	end_p.rotate(-x_axis_rotation);
 
-	ASSERT(radii_ratio > 0)
+	utki::assert(radii_ratio > 0, SL);
 	end_p.y() /= radii_ratio;
 
 	// find the angle between the end point and the x axis
@@ -698,7 +843,7 @@ void canvas::agg_render(agg::rasterizer_scanline_aa<>& rasterizer)
 
 		agg::span_allocator<decltype(group::pixel_format)::color_type> span_allocator;
 
-		ASSERT(!this->group_stack.empty())
+		utki::assert(!this->group_stack.empty(), SL);
 		agg::render_scanlines_aa(
 			rasterizer,
 			scanline,
@@ -714,11 +859,17 @@ void canvas::fill()
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_fill_preserve(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 
 	this->agg_path_to_polyline();
 
@@ -746,7 +897,7 @@ void canvas::agg_stroke(path_type& vertex_source)
 	stroke_path.line_join(this->context.line_join);
 	stroke_path.approximation_scale(this->approximation_scale);
 
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	agg::conv_transform<decltype(stroke_path), decltype(this->context.matrix)> transformed_path(
 		stroke_path,
 		this->context.matrix
@@ -763,9 +914,15 @@ void canvas::stroke()
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_stroke_preserve(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->agg_path_to_polyline();
 
@@ -818,7 +975,12 @@ void canvas::rectangle(
 			backend_real(rect.d.x()),
 			backend_real(rect.d.y())
 		);
-		ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+		utki::assert(
+			[this]() -> bool {
+				return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+			},
+			SL
+		);
 #else
 		this->move_abs(rect.p);
 		this->line_abs(rect.x2_y1());
@@ -936,7 +1098,12 @@ void canvas::set_line_width(real width)
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_set_line_width(this->cr, backend_real(width));
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	this->context.line_width = width;
 #endif
@@ -957,11 +1124,16 @@ void canvas::set_line_cap(line_cap lc)
 		}
 	}();
 	cairo_set_line_cap(this->cr, clc);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	switch (lc) {
 		default:
-			ASSERT(false)
+			utki::assert(false, SL);
 		case line_cap::butt:
 			this->context.line_cap = agg::line_cap_e::butt_cap;
 			break;
@@ -990,11 +1162,16 @@ void canvas::set_line_join(line_join lj)
 		}
 	}();
 	cairo_set_line_join(this->cr, clj);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	switch (lj) {
 		default:
-			ASSERT(false)
+			utki::assert(false, SL);
 		case line_join::miter:
 			this->context.line_join = agg::line_join_e::miter_join;
 			break;
@@ -1013,13 +1190,18 @@ r4::matrix2<real> canvas::get_matrix() const
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_matrix_t cm;
 	cairo_get_matrix(this->cr, &cm);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 	return {
 		{real(cm.xx), real(cm.xy), real(cm.x0)},
 		{real(cm.yx), real(cm.yy), real(cm.y0)}
 	};
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	return to_r4_matrix(this->context.matrix);
 #endif
 }
@@ -1036,7 +1218,7 @@ void canvas::set_matrix(const r4::matrix2<real>& m)
 	cm.y0 = backend_real(m[1][2]);
 	cairo_set_matrix(this->cr, &cm);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	this->context.matrix = to_agg_matrix(m);
 #endif
 }
@@ -1045,11 +1227,11 @@ veg::image_span_type canvas::get_image_span()
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	auto s = cairo_get_group_target(cr);
-	ASSERT(s)
+	utki::assert(s, SL);
 
 	auto stride_bytes = cairo_image_surface_get_stride(s);
 
-	ASSERT(stride_bytes % sizeof(image_type::pixel_type) == 0)
+	utki::assert(stride_bytes % sizeof(image_type::pixel_type) == 0, SL);
 
 	auto dims = r4::vector2<unsigned>(
 		unsigned(cairo_image_surface_get_width(s)), //
@@ -1065,7 +1247,7 @@ veg::image_span_type canvas::get_image_span()
 		buffer
 	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(!this->group_stack.empty())
+	utki::assert(!this->group_stack.empty(), SL);
 	auto& cur_group = this->group_stack.back();
 
 	return cur_group.image.span();
@@ -1086,24 +1268,36 @@ void canvas::push_group()
 
 void canvas::pop_group(real opacity)
 {
-	ASSERT(0 <= opacity)
-	ASSERT(opacity <= 1)
+	utki::assert(0 <= opacity, SL);
+	utki::assert(opacity <= 1, SL);
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_pop_group_to_source(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 
 	if (opacity < 1) {
 		cairo_paint_with_alpha(this->cr, opacity);
 	} else {
 		cairo_paint(this->cr);
 	}
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(this->group_stack.size() >= 2)
+	utki::assert(this->group_stack.size() >= 2, SL);
 
 	auto& sg = this->group_stack.back();
 	auto& dg = *std::next(this->group_stack.rbegin());
@@ -1153,37 +1347,55 @@ void canvas::pop_mask_and_group()
 
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	cairo_pattern_t* mask = cairo_pop_group(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 
 	utki::scope_exit scope_exit([mask]() {
 		cairo_pattern_destroy(mask);
 	});
 
 	cairo_pop_group_to_source(this->cr);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 
 	cairo_mask(this->cr, mask);
-	ASSERT(cairo_status(this->cr) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-		o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
-	})
+	utki::assert(
+		[this]() -> bool {
+			return cairo_status(this->cr) == CAIRO_STATUS_SUCCESS;
+		},
+		[&](auto& o) {
+			o << "cairo error: " << cairo_status_to_string(cairo_status(this->cr));
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	ASSERT(this->group_stack.size() >= 2)
+	utki::assert(this->group_stack.size() >= 2, SL);
 
 	auto mask = this->group_stack.back().image.span();
 	auto grp = std::next(this->group_stack.rbegin())->image.span();
 
 	// apply mask to the group by multiplying group pixels by mask alpha
-	ASSERT(mask.dims() == grp.dims())
+	utki::assert(mask.dims() == grp.dims(), SL);
 
 	// TODO: use std::views::zip from C++23 (invent drop-in replacement)
 	for (auto mask_line_iter = mask.begin(), group_line_iter = grp.begin(); mask_line_iter != mask.end();
 		 ++mask_line_iter, ++group_line_iter)
 	{
-		ASSERT(mask_line_iter->size() == group_line_iter->size())
+		utki::assert(mask_line_iter->size() == group_line_iter->size(), SL);
 		for (auto mi = mask_line_iter->begin(), gi = group_line_iter->begin(); mi != mask_line_iter->end(); ++mi, ++gi)
 		{
 			// extract group color and mask alpha
@@ -1220,7 +1432,7 @@ void canvas::set_dash_pattern(utki::span<const real> dashes, real offset)
 		auto dst = dasharray.begin();
 		for (unsigned r = 0; r != num_repeats; ++r) {
 			for (auto src = dashes.begin(); src != dashes.end(); ++src, ++dst) {
-				ASSERT(dst != dasharray.end())
+				utki::assert(dst != dasharray.end(), SL);
 				if (*src == 0) {
 					*dst = epsilon_dash;
 				} else {
@@ -1228,7 +1440,7 @@ void canvas::set_dash_pattern(utki::span<const real> dashes, real offset)
 				}
 			}
 		}
-		ASSERT(dst == dasharray.end())
+		utki::assert(dst == dasharray.end(), SL);
 		cairo_set_dash(this->cr, dasharray.data(), int(dasharray.size()), backend_real(offset));
 		if (cairo_status(this->cr) != CAIRO_STATUS_SUCCESS) {
 			throw std::runtime_error(
@@ -1254,7 +1466,7 @@ void canvas::set_dash_pattern(utki::span<const real> dashes, real offset)
 	for (auto& dst : this->context.dash_array) {
 		std::array<real, 2> pair{};
 		for (auto& v : pair) {
-			ASSERT(src != dashes.end())
+			utki::assert(src != dashes.end(), SL);
 			if (*src == 0) {
 				v = decltype(pair)::value_type(epsilon_dash);
 			} else {

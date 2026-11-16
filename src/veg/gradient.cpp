@@ -49,7 +49,7 @@ agg::rgba to_agg_rgba(const r4::vector4<real>& rgba)
 gradient::~gradient()
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
-	ASSERT(this->pattern)
+	utki::assert(this->pattern, SL);
 	cairo_pattern_destroy(this->pattern);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 #endif
@@ -138,7 +138,7 @@ void gradient::set_spread_method(gradient_spread_method spread_method)
 	cairo_extend_t extend = [&spread_method]() {
 		switch (spread_method) {
 			default:
-				ASSERT(false)
+				utki::assert(false, SL);
 			case gradient_spread_method::pad:
 				return CAIRO_EXTEND_PAD;
 			case gradient_spread_method::reflect:
@@ -149,11 +149,16 @@ void gradient::set_spread_method(gradient_spread_method spread_method)
 	}();
 
 	cairo_pattern_set_extend(this->pattern, extend);
-	ASSERT(cairo_pattern_status(this->pattern) == CAIRO_STATUS_SUCCESS)
+	utki::assert(
+		[this]() -> bool {
+			return cairo_pattern_status(this->pattern) == CAIRO_STATUS_SUCCESS;
+		},
+		SL
+	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	switch (spread_method) {
 		default:
-			ASSERT(false)
+			utki::assert(false, SL);
 		case gradient_spread_method::pad:
 			this->cur_grad = &this->pad;
 			break;
@@ -172,10 +177,16 @@ void gradient::set_stops(utki::span<const stop> stops)
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	for (auto& s : stops) {
 		cairo_pattern_add_color_stop_rgba(this->pattern, s.offset, s.rgba.r(), s.rgba.g(), s.rgba.b(), s.rgba.a());
-		ASSERT(cairo_pattern_status(this->pattern) == CAIRO_STATUS_SUCCESS, [&](auto& o) {
-			o << "status = " << cairo_status_to_string(cairo_pattern_status(this->pattern)) << " offset = " << s.offset
-			  << " rgba = " << s.rgba;
-		})
+		utki::assert(
+			[this]() -> bool {
+				return cairo_pattern_status(this->pattern) == CAIRO_STATUS_SUCCESS;
+			},
+			[&](auto& o) {
+				o << "status = " << cairo_status_to_string(cairo_pattern_status(this->pattern))
+				  << " offset = " << s.offset << " rgba = " << s.rgba;
+			},
+			SL
+		);
 	}
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 	if (stops.size() == 1) {
