@@ -37,6 +37,8 @@ SOFTWARE.
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 #	include <agg/agg_gradient_lut.h>
 #	include <agg/agg_span_gradient.h>
+
+#	include <utki/enum_array.hpp>
 #endif
 
 namespace veg {
@@ -59,7 +61,9 @@ enum class gradient_spread_method {
 	/**
 	 * @brief Repeat gradients stops in direct order.
 	 */
-	repeat
+	repeat,
+
+	enum_size
 };
 
 /**
@@ -112,9 +116,11 @@ protected:
 	};
 
 	// The concrete gradient wrappers are members of the derived classes, so
-	// derived classes must set this in their constructor bodies and override
-	// set_spread_method().
+	// derived classes must set this in their constructor bodies and provide
+	// the wrappers via get_spread_method_wrapper().
 	gradient_wrapper_base* cur_grad = nullptr;
+
+	virtual gradient_wrapper_base& get_spread_method_wrapper(gradient_spread_method spread_method) = 0;
 
 	gradient() = default;
 
@@ -146,7 +152,7 @@ public:
 	 * Spread method is a behavior of the gradient when it reaches its final
 	 * gradient stop.
 	 */
-	virtual void set_spread_method(gradient_spread_method spread_method);
+	void set_spread_method(gradient_spread_method spread_method);
 
 	/**
 	 * @brief Set gradient stops.
@@ -172,7 +178,12 @@ class linear_gradient : public gradient
 	spread_gradient_wrapper<agg::gradient_x, agg::gradient_reflect_adaptor> linear_reflect;
 	spread_gradient_wrapper<agg::gradient_x, agg::gradient_repeat_adaptor> linear_repeat;
 
-	void set_spread_method(gradient_spread_method spread_method) override;
+	utki::enum_array<gradient_wrapper_base*, gradient_spread_method> spread_wrappers;
+
+	gradient_wrapper_base& get_spread_method_wrapper(gradient_spread_method spread_method) override
+	{
+		return *this->spread_wrappers[spread_method];
+	}
 #endif
 
 public:
@@ -197,7 +208,12 @@ class radial_gradient : public gradient
 	spread_gradient_wrapper<agg::gradient_radial_focus, agg::gradient_reflect_adaptor> radial_reflect;
 	spread_gradient_wrapper<agg::gradient_radial_focus, agg::gradient_repeat_adaptor> radial_repeat;
 
-	void set_spread_method(gradient_spread_method spread_method) override;
+	utki::enum_array<gradient_wrapper_base*, gradient_spread_method> spread_wrappers;
+
+	gradient_wrapper_base& get_spread_method_wrapper(gradient_spread_method spread_method) override
+	{
+		return *this->spread_wrappers[spread_method];
+	}
 #endif
 
 public:
