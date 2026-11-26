@@ -111,11 +111,27 @@ protected:
 		}
 	};
 
-	const gradient_wrapper_base& pad;
-	const gradient_wrapper_base& reflect;
-	const gradient_wrapper_base& repeat;
+	gradient_wrapper_base* pad = nullptr;
+	gradient_wrapper_base* reflect = nullptr;
+	gradient_wrapper_base* repeat = nullptr;
 
-	const gradient_wrapper_base* cur_grad;
+	gradient_wrapper_base* cur_grad = nullptr;
+
+	// Derived class must call this in its constructor body, not in the
+	// base class constructor call, since the wrapper members are constructed
+	// after the base class.
+	void init_gradients(
+		gradient_wrapper_base* pad,
+		gradient_wrapper_base* reflect,
+		gradient_wrapper_base* repeat
+	) {
+		this->pad = pad;
+		this->reflect = reflect;
+		this->repeat = repeat;
+		this->cur_grad = this->pad;
+	}
+
+	gradient() = default;
 
 	const gradient_wrapper_base& get_agg_gradient() const
 	{
@@ -128,16 +144,6 @@ protected:
 
 	r4::matrix2<real> local_matrix;
 
-	gradient(
-		const gradient_wrapper_base& pad,
-		const gradient_wrapper_base& reflect,
-		const gradient_wrapper_base& repeat
-	) :
-		pad(pad),
-		reflect(reflect),
-		repeat(repeat),
-		cur_grad(&this->pad)
-	{}
 #endif
 
 public:

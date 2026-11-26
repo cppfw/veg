@@ -56,11 +56,10 @@ gradient::~gradient()
 }
 
 linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<real>& p1)
-#if VEG_BACKEND == VEG_BACKEND_AGG
-	:
-	gradient(this->linear_pad, this->linear_reflect, this->linear_repeat)
-#endif
 {
+#if VEG_BACKEND == VEG_BACKEND_AGG
+	this->init_gradients(&this->linear_pad, &this->linear_reflect, &this->linear_repeat);
+#endif
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	this->pattern = cairo_pattern_create_linear(
 		backend_real(p0.x()),
@@ -91,11 +90,10 @@ linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<
 }
 
 radial_gradient::radial_gradient(const r4::vector2<real>& f, const r4::vector2<real>& c, real r)
-#if VEG_BACKEND == VEG_BACKEND_AGG
-	:
-	gradient(this->radial_pad, this->radial_reflect, this->radial_repeat)
-#endif
 {
+#if VEG_BACKEND == VEG_BACKEND_AGG
+	this->init_gradients(&this->radial_pad, &this->radial_reflect, &this->radial_repeat);
+#endif
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	this->pattern = cairo_pattern_create_radial(
 		backend_real(f.x()),
@@ -160,13 +158,13 @@ void gradient::set_spread_method(gradient_spread_method spread_method)
 		default:
 			utki::assert(false, SL);
 		case gradient_spread_method::pad:
-			this->cur_grad = &this->pad;
+			this->cur_grad = this->pad;
 			break;
 		case gradient_spread_method::reflect:
-			this->cur_grad = &this->reflect;
+			this->cur_grad = this->reflect;
 			break;
 		case gradient_spread_method::repeat:
-			this->cur_grad = &this->repeat;
+			this->cur_grad = this->repeat;
 			break;
 	}
 #endif
