@@ -111,25 +111,10 @@ protected:
 		}
 	};
 
-	gradient_wrapper_base* pad = nullptr;
-	gradient_wrapper_base* reflect = nullptr;
-	gradient_wrapper_base* repeat = nullptr;
-
+	// The concrete gradient wrappers are members of the derived classes, so
+	// derived classes must set this in their constructor bodies and override
+	// set_spread_method().
 	gradient_wrapper_base* cur_grad = nullptr;
-
-	// Derived class must call this in its constructor body, not in the
-	// base class constructor call, since the wrapper members are constructed
-	// after the base class.
-	void init_gradients(
-		gradient_wrapper_base* pad,
-		gradient_wrapper_base* reflect,
-		gradient_wrapper_base* repeat
-	) {
-		this->pad = pad;
-		this->reflect = reflect;
-		this->repeat = repeat;
-		this->cur_grad = this->pad;
-	}
 
 	gradient() = default;
 
@@ -161,7 +146,7 @@ public:
 	 * Spread method is a behavior of the gradient when it reaches its final
 	 * gradient stop.
 	 */
-	void set_spread_method(gradient_spread_method spread_method);
+	virtual void set_spread_method(gradient_spread_method spread_method);
 
 	/**
 	 * @brief Set gradient stops.
@@ -186,6 +171,8 @@ class linear_gradient : public gradient
 	gradient_wrapper<agg::gradient_x> linear_pad;
 	spread_gradient_wrapper<agg::gradient_x, agg::gradient_reflect_adaptor> linear_reflect;
 	spread_gradient_wrapper<agg::gradient_x, agg::gradient_repeat_adaptor> linear_repeat;
+
+	void set_spread_method(gradient_spread_method spread_method) override;
 #endif
 
 public:
@@ -209,6 +196,8 @@ class radial_gradient : public gradient
 	gradient_wrapper<agg::gradient_radial_focus> radial_pad;
 	spread_gradient_wrapper<agg::gradient_radial_focus, agg::gradient_reflect_adaptor> radial_reflect;
 	spread_gradient_wrapper<agg::gradient_radial_focus, agg::gradient_repeat_adaptor> radial_repeat;
+
+	void set_spread_method(gradient_spread_method spread_method) override;
 #endif
 
 public:

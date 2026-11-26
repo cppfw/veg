@@ -57,9 +57,6 @@ gradient::~gradient()
 
 linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<real>& p1)
 {
-#if VEG_BACKEND == VEG_BACKEND_AGG
-	this->init_gradients(&this->linear_pad, &this->linear_reflect, &this->linear_repeat);
-#endif
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	this->pattern = cairo_pattern_create_linear(
 		backend_real(p0.x()),
@@ -71,6 +68,9 @@ linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<
 		throw std::runtime_error("cairo_pattern_create_linear() failed");
 	}
 #elif VEG_BACKEND == VEG_BACKEND_AGG
+	// default spread method
+	this->cur_grad = &this->linear_pad;
+
 	auto v = p1 - p0;
 	auto len = v.norm();
 
@@ -91,9 +91,6 @@ linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<
 
 radial_gradient::radial_gradient(const r4::vector2<real>& f, const r4::vector2<real>& c, real r)
 {
-#if VEG_BACKEND == VEG_BACKEND_AGG
-	this->init_gradients(&this->radial_pad, &this->radial_reflect, &this->radial_repeat);
-#endif
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
 	this->pattern = cairo_pattern_create_radial(
 		backend_real(f.x()),
@@ -107,6 +104,9 @@ radial_gradient::radial_gradient(const r4::vector2<real>& f, const r4::vector2<r
 		throw std::runtime_error("cairo_pattern_create_radial() failed");
 	}
 #elif VEG_BACKEND == VEG_BACKEND_AGG
+	// default spread method
+	this->cur_grad = &this->radial_pad;
+
 	// gradient parameters are stretched so that the gradient radius becomes
 	// color_lut_size, this is for optimal color picking from the color_lut
 	real lut_r = decltype(gradient::lut)::color_lut_size;
@@ -154,21 +154,47 @@ void gradient::set_spread_method(gradient_spread_method spread_method)
 		SL
 	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
+	// this method is overridden by the derived classes, since the concrete
+	// gradient wrappers are members of the derived classes
+	utki::assert(false, SL);
+#endif
+}
+
+#if VEG_BACKEND == VEG_BACKEND_AGG
+void linear_gradient::set_spread_method(gradient_spread_method spread_method)
+{
 	switch (spread_method) {
 		default:
 			utki::assert(false, SL);
 		case gradient_spread_method::pad:
-			this->cur_grad = this->pad;
+			this->cur_grad = &this->linear_pad;
 			break;
 		case gradient_spread_method::reflect:
-			this->cur_grad = this->reflect;
+			this->cur_grad = &this->linear_reflect;
 			break;
 		case gradient_spread_method::repeat:
-			this->cur_grad = this->repeat;
+			this->cur_grad = &this->linear_repeat;
 			break;
 	}
-#endif
 }
+
+void radial_gradient::set_spread_method(gradient_spread_method spread_method)
+{
+	switch (spread_method) {
+		default:
+			utki::assert(false, SL);
+		case gradient_spread_method::pad:
+			this->cur_grad = &this->radial_pad;
+			break;
+		case gradient_spread_method::reflect:
+			this->cur_grad = &this->radial_reflect;
+			break;
+		case gradient_spread_method::repeat:
+			this->cur_grad = &this->radial_repeat;
+			break;
+	}
+}
+#endif
 
 void gradient::set_stops(utki::span<const stop> stops)
 {
