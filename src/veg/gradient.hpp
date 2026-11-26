@@ -37,6 +37,8 @@ SOFTWARE.
 #elif VEG_BACKEND == VEG_BACKEND_AGG
 #	include <agg/agg_gradient_lut.h>
 #	include <agg/agg_span_gradient.h>
+
+#	include <utki/enum_array.hpp>
 #endif
 
 namespace veg {
@@ -59,7 +61,9 @@ enum class gradient_spread_method {
 	/**
 	 * @brief Repeat gradients stops in direct order.
 	 */
-	repeat
+	repeat,
+
+	enum_size
 };
 
 /**
@@ -111,11 +115,14 @@ protected:
 		}
 	};
 
-	const gradient_wrapper_base& pad;
-	const gradient_wrapper_base& reflect;
-	const gradient_wrapper_base& repeat;
+	// The concrete gradient wrappers are members of the derived classes, so
+	// derived classes must set this in their constructor bodies and provide
+	// the wrappers via get_spread_method_wrapper().
+	gradient_wrapper_base* cur_grad = nullptr;
 
-	const gradient_wrapper_base* cur_grad;
+	virtual gradient_wrapper_base& get_spread_method_wrapper(gradient_spread_method spread_method) = 0;
+
+	gradient() = default;
 
 	const gradient_wrapper_base& get_agg_gradient() const
 	{
@@ -128,16 +135,6 @@ protected:
 
 	r4::matrix2<real> local_matrix;
 
-	gradient(
-		const gradient_wrapper_base& pad,
-		const gradient_wrapper_base& reflect,
-		const gradient_wrapper_base& repeat
-	) :
-		pad(pad),
-		reflect(reflect),
-		repeat(repeat),
-		cur_grad(&this->pad)
-	{}
 #endif
 
 public:
@@ -180,6 +177,13 @@ class linear_gradient : public gradient
 	gradient_wrapper<agg::gradient_x> linear_pad;
 	spread_gradient_wrapper<agg::gradient_x, agg::gradient_reflect_adaptor> linear_reflect;
 	spread_gradient_wrapper<agg::gradient_x, agg::gradient_repeat_adaptor> linear_repeat;
+
+	utki::enum_array<gradient_wrapper_base*, gradient_spread_method> spread_wrappers;
+
+	gradient_wrapper_base& get_spread_method_wrapper(gradient_spread_method spread_method) override
+	{
+		return *this->spread_wrappers[spread_method];
+	}
 #endif
 
 public:
@@ -203,6 +207,13 @@ class radial_gradient : public gradient
 	gradient_wrapper<agg::gradient_radial_focus> radial_pad;
 	spread_gradient_wrapper<agg::gradient_radial_focus, agg::gradient_reflect_adaptor> radial_reflect;
 	spread_gradient_wrapper<agg::gradient_radial_focus, agg::gradient_repeat_adaptor> radial_repeat;
+
+	utki::enum_array<gradient_wrapper_base*, gradient_spread_method> spread_wrappers;
+
+	gradient_wrapper_base& get_spread_method_wrapper(gradient_spread_method spread_method) override
+	{
+		return *this->spread_wrappers[spread_method];
+	}
 #endif
 
 public:

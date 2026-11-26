@@ -58,7 +58,7 @@ gradient::~gradient()
 linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<real>& p1)
 #if VEG_BACKEND == VEG_BACKEND_AGG
 	:
-	gradient(this->linear_pad, this->linear_reflect, this->linear_repeat)
+	spread_wrappers({&this->linear_pad, &this->linear_reflect, &this->linear_repeat})
 #endif
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
@@ -72,6 +72,9 @@ linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<
 		throw std::runtime_error("cairo_pattern_create_linear() failed");
 	}
 #elif VEG_BACKEND == VEG_BACKEND_AGG
+	// set the initial spread method
+	this->set_spread_method(gradient_spread_method::pad);
+
 	auto v = p1 - p0;
 	auto len = v.norm();
 
@@ -93,7 +96,7 @@ linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<
 radial_gradient::radial_gradient(const r4::vector2<real>& f, const r4::vector2<real>& c, real r)
 #if VEG_BACKEND == VEG_BACKEND_AGG
 	:
-	gradient(this->radial_pad, this->radial_reflect, this->radial_repeat)
+	spread_wrappers({&this->radial_pad, &this->radial_reflect, &this->radial_repeat})
 #endif
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
@@ -109,6 +112,9 @@ radial_gradient::radial_gradient(const r4::vector2<real>& f, const r4::vector2<r
 		throw std::runtime_error("cairo_pattern_create_radial() failed");
 	}
 #elif VEG_BACKEND == VEG_BACKEND_AGG
+	// set the initial spread method
+	this->set_spread_method(gradient_spread_method::pad);
+
 	// gradient parameters are stretched so that the gradient radius becomes
 	// color_lut_size, this is for optimal color picking from the color_lut
 	real lut_r = decltype(gradient::lut)::color_lut_size;
@@ -156,19 +162,7 @@ void gradient::set_spread_method(gradient_spread_method spread_method)
 		SL
 	);
 #elif VEG_BACKEND == VEG_BACKEND_AGG
-	switch (spread_method) {
-		default:
-			utki::assert(false, SL);
-		case gradient_spread_method::pad:
-			this->cur_grad = &this->pad;
-			break;
-		case gradient_spread_method::reflect:
-			this->cur_grad = &this->reflect;
-			break;
-		case gradient_spread_method::repeat:
-			this->cur_grad = &this->repeat;
-			break;
-	}
+	this->cur_grad = &this->get_spread_method_wrapper(spread_method);
 #endif
 }
 
