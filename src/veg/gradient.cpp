@@ -57,12 +57,8 @@ gradient::~gradient()
 
 linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<real>& p1)
 #if VEG_BACKEND == VEG_BACKEND_AGG
-:
-	spread_wrappers({
-		&this->linear_pad,
-		&this->linear_reflect,
-		&this->linear_repeat
-	})
+	:
+	spread_wrappers({&this->linear_pad, &this->linear_reflect, &this->linear_repeat})
 #endif
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
@@ -99,12 +95,8 @@ linear_gradient::linear_gradient(const r4::vector2<real>& p0, const r4::vector2<
 
 radial_gradient::radial_gradient(const r4::vector2<real>& f, const r4::vector2<real>& c, real r)
 #if VEG_BACKEND == VEG_BACKEND_AGG
-:
-	spread_wrappers({
-		&this->radial_pad,
-		&this->radial_reflect,
-		&this->radial_repeat
-	})
+	:
+	spread_wrappers({&this->radial_pad, &this->radial_reflect, &this->radial_repeat})
 #endif
 {
 #if VEG_BACKEND == VEG_BACKEND_CAIRO
